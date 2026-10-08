@@ -339,17 +339,39 @@ class ClientTests(unittest.TestCase):
         with mock.patch.object(urllib.request, "urlopen", urlopen):
             self.assertEqual(self.client().get_basic_info("abc"), {"video_id": "abc"})
 
-    def test_batch_create_is_not_retried_after_a_network_error(self) -> None:
-        calls = {"n": 0}
+    def test_batch_create_retries_a_network_error_with_the_same_key(self) -> None:
+        keys: list[str] = []
+        outcomes: list[object] = [TimeoutError("timed out"), json_body({"id": "job1"}, 202)]
 
         def urlopen(request, timeout=None):
-            calls["n"] += 1
-            raise TimeoutError("timed out")
+            keys.append(request.get_header("Idempotency-key"))
+            item = outcomes.pop(0)
+            if isinstance(item, Exception):
+                raise item
+            return item
 
         with mock.patch.object(urllib.request, "urlopen", urlopen):
-            with self.assertRaises(YTAPIError):
-                self.client().create_batch([{"type": "transcript", "video_id": "abc"}])
-        self.assertEqual(calls["n"], 1)
+            job = self.client().create_batch([{"type": "transcript", "video_id": "abc"}])
+        self.assertEqual(job["id"], "job1")
+        self.assertEqual(len(keys), 2)
+        self.assertTrue(keys[0])
+        self.assertEqual(keys[0], keys[1])
+
+    def test_batch_create_uses_the_given_key_and_new_keys_per_call(self) -> None:
+        keys: list[str] = []
+
+        def urlopen(request, timeout=None):
+            keys.append(request.get_header("Idempotency-key"))
+            return json_body({"id": "job1"}, 202)
+
+        task = [{"type": "transcript", "video_id": "abc"}]
+        with mock.patch.object(urllib.request, "urlopen", urlopen):
+            client = self.client()
+            client.create_batch(task, idempotency_key="order-42")
+            client.create_batch(task)
+            client.create_batch(task)
+        self.assertEqual(keys[0], "order-42")
+        self.assertNotEqual(keys[1], keys[2])
 
     def test_daily_limit_is_raised_without_waiting(self) -> None:
         calls = {"n": 0}
@@ -490,7 +512,7 @@ class ClientTests(unittest.TestCase):
                 client.poll_batch("batch_1", interval=1, timeout=3)
 
 
-    def test_batch_create_retries_429_but_not_5xx(self) -> None:
+    def test_batch_create_retries_429_and_5xx(self) -> None:
         calls: list[int] = []
 
         def urlopen_503(request, timeout=None):
@@ -500,7 +522,8 @@ class ClientTests(unittest.TestCase):
         with mock.patch.object(urllib.request, "urlopen", urlopen_503):
             with self.assertRaises(ServerError):
                 self.client().create_batch([{"type": "transcript", "video_id": "abc"}])
-        self.assertEqual(calls, [503])  # no retry: the job may already exist
+        # 1 try + max_retries; safe because every attempt carries the same key.
+        self.assertEqual(calls, [503, 503, 503])
 
         responses = [error(429, "rate_limited", "slow down"), json_body({"id": "job1", "status": "pending"}, 202)]
 

@@ -9,6 +9,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from typing import Any
 
@@ -48,7 +49,7 @@ from .models import (
     VideoInfo,
 )
 
-_USER_AGENT = "ytapi-python/0.1.0 (+https://docs.ytapi.dev)"
+_USER_AGENT = "ytapi-python/0.2.0 (+https://docs.ytapi.dev)"
 _ENV_KEYS = ("YTAPI_API_KEY", "YTAPI_KEY")
 # A free account's daily limit answers 429 with Retry-After until 00:00 UTC.
 # Waiting that long inside a call would hang the caller, so it is raised.
@@ -72,8 +73,8 @@ class YTAPI:
     unless the body sets ``retryable`` to false. A 429 whose ``Retry-After`` is
     longer than ``max_retry_wait`` seconds, such as a free account's daily
     limit, is raised at once instead of waited out. ``max_retries=0`` disables
-    retries. Creating a batch is never retried after a 5xx or a network error,
-    since the job may already exist.
+    retries. ``create_batch`` sends an ``Idempotency-Key``, so its retries
+    return the same job rather than starting a second one.
     """
 
     def __init__(
@@ -254,16 +255,26 @@ class YTAPI:
         return self._request("GET", "/v1/search/suggestions", query={"q": query})
 
     def create_batch(
-        self, tasks: Sequence[BatchTask], *, concurrency: int | None = None
+        self,
+        tasks: Sequence[BatchTask],
+        *,
+        concurrency: int | None = None,
+        idempotency_key: str | None = None,
     ) -> BatchSubmit:
-        """Start a batch of up to 100 tasks. Returns the job id; poll it with ``poll_batch``."""
+        """Start a batch of up to 100 tasks. Returns the job id; poll it with ``poll_batch``.
+
+        Every call sends an ``Idempotency-Key`` (a new UUID unless you pass
+        one), so retries after a 5xx or a dropped connection return the same
+        job instead of starting and billing a second one. Pass your own key
+        to make a retry of the whole call, e.g. after a crash, safe too.
+        """
         body: dict[str, Any] = {"tasks": [dict(task) for task in tasks]}
         if concurrency is not None:
             body["concurrency"] = concurrency
-        # A 5xx or a dropped connection can come after the job was created, so
-        # a retry could start a second batch. Only 429 (nothing was created)
-        # is retried here.
-        return self._request("POST", "/v1/batch", json_body=body, retry_server_errors=False)
+        key = idempotency_key if idempotency_key is not None else str(uuid.uuid4())
+        return self._request(
+            "POST", "/v1/batch", json_body=body, extra_headers={"Idempotency-Key": key}
+        )
 
     def get_batch(self, job_id: str) -> BatchJob:
         """Status of a batch job. Free."""
@@ -293,6 +304,7 @@ class YTAPI:
         json_body: Mapping[str, Any] | None = None,
         as_text: bool = False,
         retry_server_errors: bool = True,
+        extra_headers: Mapping[str, str] | None = None,
     ) -> Any:
         url = self.base_url + path
         if query:
@@ -307,6 +319,8 @@ class YTAPI:
         }
         if data is not None:
             headers["Content-Type"] = "application/json"
+        if extra_headers:
+            headers.update(extra_headers)
 
         attempt = 0
         while True:

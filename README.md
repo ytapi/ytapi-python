@@ -101,10 +101,11 @@ except YTAPIError as exc:
 
 ## Retries
 
-The client retries a 429, a 5xx or a network error up to `max_retries` times (default 2). It backs off from 0.5 seconds, doubling up to 8, and waits longer when the server sends `Retry-After`. A few cases are not retried:
+The client retries a 429, a 5xx or a network error up to `max_retries` times (default 2). It backs off from 0.5 seconds, doubling up to 8, and waits longer when the server sends `Retry-After`. One case is not retried:
 
 - **A 429 that asks for a long wait.** The cutoff is `max_retry_wait`, default 60 seconds. This includes a free account's daily limit (`daily_limit_exceeded`), which lasts until 00:00 UTC. The client raises these right away instead of hanging your program.
-- **Creating a batch after a 5xx or a network error.** The job may already exist, so a retry could start a second one.
+
+`create_batch` sends an `Idempotency-Key` header (a new UUID per call, or pass `idempotency_key=`), so a retried submit returns the job it already created instead of starting and billing a second one. Pass your own key, such as an order ID, to make retrying the whole call safe as well.
 
 Use `YTAPI(max_retries=0)` to turn retries off.
 
