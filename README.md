@@ -9,8 +9,10 @@ Python client for [YTAPI](https://ytapi.dev?utm_source=github): YouTube transcri
 ## Install
 
 ```bash
-pip install "git+https://github.com/ytapi/ytapi-python"
+pip install ytapi-sdk
 ```
+
+The package is `ytapi-sdk` on PyPI, and you import it as `ytapi`.
 
 ## Quickstart
 
@@ -105,6 +107,10 @@ The client retries a 429, a 5xx or a network error up to `max_retries` times (de
 - **Creating a batch after a 5xx or a network error.** The job may already exist, so a retry could start a second one.
 
 Use `YTAPI(max_retries=0)` to turn retries off.
+
+## Releases
+
+Each GitHub release publishes the matching version to [PyPI](https://pypi.org/project/ytapi-sdk/) through trusted publishing. The release tag must match the version in `pyproject.toml`, such as `v0.1.0`.
 
 ## Tests
 
