@@ -1,0 +1,32 @@
+[project]
+name = "ytapi-sdk"
+version = "0.1.0"
+description = "Python client for YTAPI: YouTube transcripts, video details, search, channels and playlists."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "YTAPI" }]
+dependencies = []
+keywords = ["youtube", "transcript", "captions", "subtitles", "youtube-transcript", "ytapi"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+    "Topic :: Multimedia :: Video",
+]
+
+[project.urls]
+Documentation = "https://docs.ytapi.dev"
+Homepage = "https://ytapi.dev"
+Repository = "https://github.com/ytapi/ytapi-python"
+Issues = "https://github.com/ytapi/ytapi-python/issues"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ytapi = ["py.typed"]
