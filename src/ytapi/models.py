@@ -86,6 +86,8 @@ class VideoChannel(TypedDict, total=False):
     title: str
     url: str
     subscribers: str
+    subscriber_count: int  # ``subscribers`` as an approximate number
+    is_verified: bool
     avatar_url: str
 
 
@@ -95,6 +97,27 @@ class Chapter(TypedDict, total=False):
     time_description: str
 
 
+class DescriptionLink(TypedDict, total=False):
+    text: str
+    url: str
+
+
+class MusicTrack(TypedDict, total=False):
+    title: str
+    artist: str
+    album: str
+
+
+class RelatedVideo(TypedDict, total=False):
+    video_id: str
+    title: str
+    channel_title: str
+    channel_id: str
+    length_text: str
+    view_count_text: str
+    published_text: str
+
+
 class VideoInfo(TypedDict, total=False):
     video_id: str
     title: str
@@ -102,12 +125,24 @@ class VideoInfo(TypedDict, total=False):
     length_seconds: float
     view_count: int
     like_count: int
+    comment_count: int  # rounded by YouTube; absent when comments are off
+    comment_count_text: str
     published: int
     keywords: list[str]
+    is_live: bool
+    is_upcoming: bool  # a scheduled live stream or premiere
+    is_live_content: bool
+    scheduled_start: int  # Unix start time, upcoming only
     channel: VideoChannel
     thumbnails: list[Thumbnail]
     available_languages: list[CaptionLanguage]
     chapters: list[Chapter]
+    ai_summary: str  # YouTube's own summary, when it shows one
+    content_disclosure: str  # YouTube's "How this was made" note
+    hashtags: list[str]
+    links: list[DescriptionLink]
+    music: list[MusicTrack]
+    related: list[RelatedVideo]  # up to 20
 
 
 class PlaylistVideo(TypedDict, total=False):
