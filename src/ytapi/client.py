@@ -184,10 +184,16 @@ class YTAPI:
             query={"cursor": cursor},
         )
 
-    def iter_comment_replies(self, video_id: str, replies_cursor: str) -> Iterator[Comment]:
-        """Every reply to one comment, starting from its ``replies_cursor``."""
+    def iter_comment_replies(
+        self, video_id: str, replies_cursor: str | None
+    ) -> Iterator[Comment]:
+        """Every reply to one comment, starting from its ``replies_cursor``.
+        Yields nothing when the comment has no replies (an empty cursor)."""
+        if not replies_cursor:
+            return
+        first = replies_cursor
         yield from _pages(
-            lambda cursor: self.get_comment_replies(video_id, cursor or replies_cursor),
+            lambda cursor: self.get_comment_replies(video_id, cursor or first),
             "comments",
         )
 

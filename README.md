@@ -47,9 +47,9 @@ page = api.get_comments("dQw4w9WgXcQ", sort="top")
 for comment in page["comments"]:
     print(comment["like_count"], comment["author"]["name"], comment["text"])
 # A comment's replies, from its replies_cursor.
-top = page["comments"][0]
-if top.get("replies_cursor"):
-    for reply in api.iter_comment_replies("dQw4w9WgXcQ", top["replies_cursor"]):
+if page["comments"]:
+    top = page["comments"][0]
+    for reply in api.iter_comment_replies("dQw4w9WgXcQ", top.get("replies_cursor")):
         print("  ", reply["text"])
 
 # The "most replayed" graph: 1 credit; free NotFoundError when a video has none.

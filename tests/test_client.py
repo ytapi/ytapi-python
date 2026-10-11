@@ -513,6 +513,42 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(replies, ["ra", "rb"])
         self.assertEqual(len(seen), 4)
 
+    def test_comments_and_heatmap_not_found_codes(self) -> None:
+        for code, call in [
+            ("comments_disabled", lambda c: c.get_comments("vid")),
+            ("heatmap_unavailable", lambda c: c.get_heatmap("vid")),
+        ]:
+            def urlopen(request, timeout=None, code=code):
+                raise error(404, code, code)
+
+            with mock.patch.object(urllib.request, "urlopen", urlopen):
+                with self.assertRaises(NotFoundError) as raised:
+                    call(self.client())
+            self.assertEqual(raised.exception.code, code)
+
+    def test_comment_iterators_keep_the_sort_and_handle_empty_pages(self) -> None:
+        seen: list[str] = []
+        pages = {
+            "/comments?sort=newest": {"has_more": True, "next_cursor": "c2", "comments": [{"id": "a"}]},
+            "/comments?sort=newest&cursor=c2": {"has_more": False, "comments": [{"id": "b"}]},
+            "/comments?sort=top": {"has_more": False, "next_cursor": None, "comments": []},
+        }
+
+        def urlopen(request, timeout=None):
+            tail = request.full_url.split("/v1/videos/vid", 1)[1]
+            seen.append(tail)
+            return json_body(pages[tail])
+
+        with mock.patch.object(urllib.request, "urlopen", urlopen):
+            client = self.client()
+            newest = [c["id"] for c in client.iter_comments("vid", sort="newest")]
+            empty = list(client.iter_comments("vid", sort="top"))
+            no_replies = list(client.iter_comment_replies("vid", ""))
+        self.assertEqual(newest, ["a", "b"])
+        self.assertEqual(empty, [])
+        self.assertEqual(no_replies, [])
+        self.assertEqual(len(seen), 3)
+
     def test_poll_batch_returns_when_the_job_finishes(self) -> None:
         statuses = ["pending", "processing", "completed"]
 
