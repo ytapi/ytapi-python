@@ -22,6 +22,7 @@ TranscriptFormat = Literal[
 TrackPolicy = Literal["manual_first", "asr_first", "exact_only"]
 SearchType = Literal["video", "channel", "playlist", "shorts", "movie"]
 SortBy = Literal["newest", "popular", "oldest"]
+CommentSort = Literal["top", "newest"]
 UploadDate = Literal["hour", "today", "week", "month", "year"]
 DurationFilter = Literal["short", "medium", "long"]
 SearchSort = Literal["relevance", "rating", "upload_date", "view_count"]
@@ -143,6 +144,62 @@ class VideoInfo(TypedDict, total=False):
     links: list[DescriptionLink]
     music: list[MusicTrack]
     related: list[RelatedVideo]  # up to 20
+
+
+class HeatmapPeak(TypedDict, total=False):
+    start_seconds: float
+    end_seconds: float
+    intensity: float  # 0 to 1, relative to the video's own peak
+    label: str  # "Most replayed" on YouTube's own marker
+
+
+class HeatmapPoint(TypedDict, total=False):
+    start_seconds: float
+    end_seconds: float
+    intensity: float
+
+
+class Heatmap(TypedDict, total=False):
+    """YouTube's "most replayed" graph, condensed to 20 parts."""
+
+    video_id: str
+    length_seconds: int
+    most_replayed: HeatmapPeak
+    peaks: list[HeatmapPeak]  # up to 5, in time order
+    curve: list[HeatmapPoint]
+
+
+class CommentAuthor(TypedDict, total=False):
+    name: str
+    channel_id: str
+    avatar_url: str
+    is_channel_owner: bool
+    is_verified: bool
+    is_artist: bool
+
+
+class Comment(TypedDict, total=False):
+    id: str
+    text: str
+    author: CommentAuthor
+    like_count: int  # YouTube's rounded figure: "12K" is 12000
+    like_count_text: str
+    reply_count: int
+    published_text: str  # relative, such as "3 years ago"
+    is_edited: bool
+    is_pinned: bool
+    is_hearted: bool
+    replies_cursor: str  # pass to get_comment_replies; only when it has replies
+
+
+class CommentsPage(TypedDict, total=False):
+    video_id: str
+    sort: CommentSort  # absent on pages of replies
+    comment_count: int  # the video's total, first page only; rounded by YouTube
+    comment_count_text: str
+    comments: list[Comment]
+    has_more: bool
+    next_cursor: str | None
 
 
 class PlaylistVideo(TypedDict, total=False):

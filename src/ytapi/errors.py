@@ -34,7 +34,8 @@ class InsufficientCreditsError(YTAPIError):
 
 
 class NotFoundError(YTAPIError):
-    """404. ``code`` is captions_disabled, language_not_found, video_unavailable, or another not-found code."""
+    """404. ``code`` is captions_disabled, language_not_found, video_unavailable,
+    comments_disabled, heatmap_unavailable, or another not-found code."""
 
 
 class RateLimitedError(YTAPIError):

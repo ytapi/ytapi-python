@@ -172,6 +172,9 @@ class ClientTests(unittest.TestCase):
             ),
             lambda: client.get_suggestions("next"),
             lambda: client.get_batch("batch_1"),
+            lambda: client.get_heatmap("kCc8FmEb1nY"),
+            lambda: client.get_comments("kCc8FmEb1nY", sort="newest", cursor="k1"),
+            lambda: client.get_comment_replies("kCc8FmEb1nY", "r1"),
         ]
         with mock.patch.object(urllib.request, "urlopen", urlopen):
             for call in calls:
@@ -191,8 +194,15 @@ class ClientTests(unittest.TestCase):
                 "https://api.ytapi.dev/v1/search",
                 "https://api.ytapi.dev/v1/search/suggestions",
                 "https://api.ytapi.dev/v1/batch/batch_1",
+                "https://api.ytapi.dev/v1/videos/kCc8FmEb1nY/heatmap",
+                "https://api.ytapi.dev/v1/videos/kCc8FmEb1nY/comments",
+                "https://api.ytapi.dev/v1/videos/kCc8FmEb1nY/comments/replies",
             ],
         )
+        comments_query = seen[11][1].split("?", 1)[1]
+        self.assertIn("sort=newest", comments_query)
+        self.assertIn("cursor=k1", comments_query)
+        self.assertEqual(seen[12][1].split("?", 1)[1], "cursor=r1")
         playlist_query = seen[2][1].split("?", 1)[1]
         self.assertIn("cursor=c1", playlist_query)
         video_query = seen[5][1].split("?", 1)[1]
@@ -480,6 +490,28 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(hits[0]["id"], "vid")
         self.assertEqual(uploads[0]["title"], "upload")
         self.assertEqual(lists[0]["playlist_id"], "PLx")
+
+    def test_comment_iterators_follow_cursors(self) -> None:
+        seen: list[str] = []
+        pages = {
+            "/comments": {"has_more": True, "next_cursor": "c2", "comments": [{"id": "a"}]},
+            "/comments?cursor=c2": {"has_more": False, "next_cursor": None, "comments": [{"id": "b"}]},
+            "/comments/replies?cursor=r1": {"has_more": True, "next_cursor": "r2", "comments": [{"id": "ra"}]},
+            "/comments/replies?cursor=r2": {"has_more": False, "comments": [{"id": "rb"}]},
+        }
+
+        def urlopen(request, timeout=None):
+            tail = request.full_url.split("/v1/videos/vid", 1)[1]
+            seen.append(tail)
+            return json_body(pages[tail])
+
+        with mock.patch.object(urllib.request, "urlopen", urlopen):
+            client = self.client()
+            comments = [c["id"] for c in client.iter_comments("vid")]
+            replies = [c["id"] for c in client.iter_comment_replies("vid", "r1")]
+        self.assertEqual(comments, ["a", "b"])
+        self.assertEqual(replies, ["ra", "rb"])
+        self.assertEqual(len(seen), 4)
 
     def test_poll_batch_returns_when_the_job_finishes(self) -> None:
         statuses = ["pending", "processing", "completed"]
