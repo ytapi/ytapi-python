@@ -1,6 +1,6 @@
 # YTAPI Python client
 
-Python client for [YTAPI](https://ytapi.dev?utm_source=github): YouTube transcripts, video details, search, channels and playlists over one HTTP API. It works from servers and cloud functions, where fetching YouTube directly tends to get blocked.
+Python client for [YTAPI](https://ytapi.dev?utm_source=github): YouTube transcripts, video details, comments, search, channels and playlists over one HTTP API. It works from servers and cloud functions, where fetching YouTube directly tends to get blocked.
 
 - No dependencies beyond the standard library. Python 3.10+.
 - Typed responses (`TypedDict`), typed errors, automatic retries and pagination.
@@ -42,6 +42,21 @@ basic = api.get_basic_info("dQw4w9WgXcQ")
 # 1 credit: description, counts, chapters and more.
 info = api.get_video_info("dQw4w9WgXcQ")
 
+# Comments, top or newest first: 1 credit per page of about 20.
+page = api.get_comments("dQw4w9WgXcQ", sort="top")
+for comment in page["comments"]:
+    print(comment["like_count"], comment["author"]["name"], comment["text"])
+# A comment's replies, from its replies_cursor.
+if page["comments"]:
+    top = page["comments"][0]
+    for reply in api.iter_comment_replies("dQw4w9WgXcQ", top.get("replies_cursor")):
+        print("  ", reply["text"])
+
+# The "most replayed" graph: 1 credit; free NotFoundError when a video has none.
+heatmap = api.get_heatmap("dQw4w9WgXcQ")
+for peak in heatmap.get("peaks", []):
+    print(peak["start_seconds"], peak["intensity"])
+
 # Channels take an @handle, a channel ID (UC...) or a URL.
 channel = api.get_channel("@3blue1brown")
 for video in api.iter_channel_videos("@3blue1brown", sort_by="popular"):
@@ -70,7 +85,7 @@ done = api.poll_batch(job["id"], timeout=120)
 print(done["successful"], done["credits_deducted"])
 ```
 
-The iterators (`iter_playlist_videos`, `iter_channel_videos`, `iter_channel_playlists`, `iter_search`) follow `next_cursor` for you. Each page is a request and uses a credit. In a batch, each successful task uses 1 credit and failed tasks are free.
+The iterators (`iter_playlist_videos`, `iter_channel_videos`, `iter_channel_playlists`, `iter_search`, `iter_comments`, `iter_comment_replies`) follow `next_cursor` for you. Each page is a request and uses a credit. In a batch, each successful task uses 1 credit and failed tasks are free.
 
 ## Errors
 
@@ -80,7 +95,7 @@ from ytapi import InsufficientCreditsError, NotFoundError, RateLimitedError, YTA
 try:
     api.get_transcript("xxxxxxxxxxx")
 except NotFoundError as exc:
-    print(exc.code)  # captions_disabled, language_not_found, video_unavailable, ...
+    print(exc.code)  # captions_disabled, comments_disabled, video_unavailable, ...
 except RateLimitedError as exc:
     print(exc.code, exc.retry_after)  # rate_limited or daily_limit_exceeded
 except InsufficientCreditsError:

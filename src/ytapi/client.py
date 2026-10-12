@@ -32,7 +32,11 @@ from .models import (
     ChannelPlaylist,
     ChannelVideo,
     ChannelVideosPage,
+    Comment,
+    CommentSort,
+    CommentsPage,
     DurationFilter,
+    Heatmap,
     PlaylistPage,
     PlaylistVideo,
     SearchItem,
@@ -49,7 +53,7 @@ from .models import (
     VideoInfo,
 )
 
-_USER_AGENT = "ytapi-python/0.2.0 (+https://docs.ytapi.dev)"
+_USER_AGENT = "ytapi-python/0.3.0 (+https://docs.ytapi.dev)"
 _ENV_KEYS = ("YTAPI_API_KEY", "YTAPI_KEY")
 # A free account's daily limit answers 429 with Retry-After until 00:00 UTC.
 # Waiting that long inside a call would hang the caller, so it is raised.
@@ -136,6 +140,62 @@ class YTAPI:
     def get_video_info(self, video_id: str) -> VideoInfo:
         """Full metadata, including description, counts and chapters. 1 credit."""
         return self._request("GET", f"/v1/videos/{_seg(video_id)}/video-info")
+
+    def get_heatmap(self, video_id: str) -> Heatmap:
+        """The "most replayed" graph: peaks and a 20-part curve. 1 credit.
+
+        Many videos have none; that raises ``NotFoundError`` with code
+        ``heatmap_unavailable`` and costs nothing.
+        """
+        return self._request("GET", f"/v1/videos/{_seg(video_id)}/heatmap")
+
+    def get_comments(
+        self,
+        video_id: str,
+        *,
+        sort: CommentSort | None = None,
+        cursor: str | None = None,
+    ) -> CommentsPage:
+        """One page of comments, about 20, top (default) or newest first. 1 credit per page.
+
+        Comments turned off raise ``NotFoundError`` with code ``comments_disabled``.
+        """
+        return self._request(
+            "GET",
+            f"/v1/videos/{_seg(video_id)}/comments",
+            query={"sort": sort, "cursor": cursor},
+        )
+
+    def iter_comments(
+        self, video_id: str, *, sort: CommentSort | None = None
+    ) -> Iterator[Comment]:
+        """Every top-level comment, following ``next_cursor``. Each page uses a credit."""
+        yield from _pages(
+            lambda cursor: self.get_comments(video_id, sort=sort, cursor=cursor),
+            "comments",
+        )
+
+    def get_comment_replies(self, video_id: str, cursor: str) -> CommentsPage:
+        """One page of replies. ``cursor`` is a comment's ``replies_cursor``,
+        then the page's ``next_cursor``. 1 credit per page."""
+        return self._request(
+            "GET",
+            f"/v1/videos/{_seg(video_id)}/comments/replies",
+            query={"cursor": cursor},
+        )
+
+    def iter_comment_replies(
+        self, video_id: str, replies_cursor: str | None
+    ) -> Iterator[Comment]:
+        """Every reply to one comment, starting from its ``replies_cursor``.
+        Yields nothing when the comment has no replies (an empty cursor)."""
+        if not replies_cursor:
+            return
+        first = replies_cursor
+        yield from _pages(
+            lambda cursor: self.get_comment_replies(video_id, cursor or first),
+            "comments",
+        )
 
     def get_playlist(self, playlist_id: str, *, cursor: str | None = None) -> PlaylistPage:
         """One page of a playlist. Later pages carry videos only. 1 credit per page."""
