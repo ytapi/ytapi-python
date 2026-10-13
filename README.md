@@ -1,6 +1,6 @@
 # YTAPI Python client
 
-Python client for [YTAPI](https://ytapi.dev?utm_source=github): YouTube transcripts, video details, comments, search, channels and playlists over one HTTP API. It works from servers and cloud functions, where fetching YouTube directly tends to get blocked.
+Python client for [YTAPI](https://ytapi.dev?utm_source=github&utm_medium=readme): YouTube transcripts, video details, comments, search, channels and playlists over one HTTP API. It works from servers and cloud functions, where fetching YouTube directly tends to get blocked.
 
 - No dependencies beyond the standard library. Python 3.10+.
 - Typed responses (`TypedDict`), typed errors, automatic retries and pagination.
@@ -16,7 +16,7 @@ The package is `ytapi-sdk` on PyPI, and you import it as `ytapi`.
 
 ## Quickstart
 
-Get a key at [ytapi.dev](https://ytapi.dev/app/api-keys?utm_source=github). New accounts get 200 free credits, and no card is needed.
+Get a key at [ytapi.dev](https://ytapi.dev/app/api-keys?utm_source=github&utm_medium=readme). New accounts get 200 free credits, and no card is needed.
 
 ```python
 from ytapi import YTAPI
