@@ -1,6 +1,6 @@
 # YTAPI Python client
 
-Python client for [YTAPI](https://ytapi.dev?utm_source=github&utm_medium=readme): YouTube transcripts, video details, comments, search, channels and playlists over one HTTP API. It works from servers and cloud functions, where fetching YouTube directly tends to get blocked.
+Python client for [YTAPI](https://ytapi.dev/?utm_source=github&utm_medium=readme): YouTube transcripts, video details, comments, search, channels and playlists over one HTTP API. It works from servers and cloud functions, where fetching YouTube directly tends to get blocked.
 
 - No dependencies beyond the standard library. Python 3.10+.
 - Typed responses (`TypedDict`), typed errors, automatic retries and pagination.
