@@ -172,6 +172,7 @@ class ClientTests(unittest.TestCase):
             ),
             lambda: client.get_suggestions("next"),
             lambda: client.get_batch("batch_1"),
+            lambda: client.get_balance(),
             lambda: client.get_heatmap("kCc8FmEb1nY"),
             lambda: client.get_comments("kCc8FmEb1nY", sort="newest", cursor="k1"),
             lambda: client.get_comment_replies("kCc8FmEb1nY", "r1"),
@@ -194,15 +195,16 @@ class ClientTests(unittest.TestCase):
                 "https://api.ytapi.dev/v1/search",
                 "https://api.ytapi.dev/v1/search/suggestions",
                 "https://api.ytapi.dev/v1/batch/batch_1",
+                "https://api.ytapi.dev/v1/balance",
                 "https://api.ytapi.dev/v1/videos/kCc8FmEb1nY/heatmap",
                 "https://api.ytapi.dev/v1/videos/kCc8FmEb1nY/comments",
                 "https://api.ytapi.dev/v1/videos/kCc8FmEb1nY/comments/replies",
             ],
         )
-        comments_query = seen[11][1].split("?", 1)[1]
+        comments_query = seen[12][1].split("?", 1)[1]
         self.assertIn("sort=newest", comments_query)
         self.assertIn("cursor=k1", comments_query)
-        self.assertEqual(seen[12][1].split("?", 1)[1], "cursor=r1")
+        self.assertEqual(seen[13][1].split("?", 1)[1], "cursor=r1")
         playlist_query = seen[2][1].split("?", 1)[1]
         self.assertIn("cursor=c1", playlist_query)
         video_query = seen[5][1].split("?", 1)[1]
@@ -220,6 +222,23 @@ class ClientTests(unittest.TestCase):
         ):
             self.assertIn(part, search_query)
         self.assertTrue(all(method == "GET" for method, _ in seen))
+
+    def test_get_balance_returns_tier_and_credit_balance(self) -> None:
+        def urlopen(request, timeout=None):
+            self.assertEqual(request.get_method(), "GET")
+            self.assertEqual(request.full_url, "https://api.ytapi.dev/v1/balance")
+            return json_body({
+                "tier": "paid",
+                "credit_balance": 303,
+                "daily_quota": None,
+            })
+
+        client = self.client()
+        with mock.patch.object(urllib.request, "urlopen", urlopen):
+            balance = client.get_balance()
+        self.assertEqual(balance["tier"], "paid")
+        self.assertEqual(balance["credit_balance"], 303)
+        self.assertIsNone(balance["daily_quota"])
 
     def test_batch_create_accepts_202_and_sends_concurrency(self) -> None:
         captured = {}

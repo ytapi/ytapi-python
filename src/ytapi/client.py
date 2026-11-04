@@ -23,6 +23,8 @@ from .errors import (
 )
 from .models import (
     TEXT_FORMATS,
+    BalanceDailyQuota,
+    BalanceResponse,
     BatchJob,
     BatchSubmit,
     BatchTask,
@@ -53,7 +55,7 @@ from .models import (
     VideoInfo,
 )
 
-_USER_AGENT = "ytapi-python/0.3.0 (+https://docs.ytapi.dev)"
+_USER_AGENT = "ytapi-python/0.4.0 (+https://docs.ytapi.dev)"
 _ENV_KEYS = ("YTAPI_API_KEY", "YTAPI_KEY")
 # A free account's daily limit answers 429 with Retry-After until 00:00 UTC.
 # Waiting that long inside a call would hang the caller, so it is raised.
@@ -313,6 +315,10 @@ class YTAPI:
     def get_suggestions(self, query: str) -> Suggestions:
         """Autocomplete strings. Costs 0 credits."""
         return self._request("GET", "/v1/search/suggestions", query={"q": query})
+
+    def get_balance(self) -> BalanceResponse:
+        """Account credit balance, tier, and free-tier daily quota. Costs 0 credits."""
+        return self._request("GET", "/v1/balance")
 
     def create_batch(
         self,
