@@ -74,6 +74,10 @@ for hit in page["items"]:
 # Search suggestions are free.
 print(api.get_suggestions("nextjs")["suggestions"])
 
+# Check account balance and daily limits (0 credits).
+balance = api.get_balance()
+print(balance["tier"], balance["credit_balance"], balance.get("daily_quota"))
+
 # Batch: up to 100 transcript or basic_info tasks per job.
 job = api.create_batch(
     [

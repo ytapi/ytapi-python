@@ -310,6 +310,18 @@ class Suggestions(TypedDict, total=False):
     suggestions: list[str]
 
 
+class BalanceDailyQuota(TypedDict, total=False):
+    limit: int
+    remaining: int
+    resets_in_seconds: int
+
+
+class BalanceResponse(TypedDict, total=False):
+    tier: str
+    credit_balance: int | None
+    daily_quota: BalanceDailyQuota | None
+
+
 class BatchTask(TypedDict, total=False):
     id: str
     type: BatchTaskType
